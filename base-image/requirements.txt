@@ -1,0 +1,5 @@
+aiohttp==3.14.1
+azure-ai-agentserver-responses==1.0.0b8
+azure-ai-projects==2.3.0
+azure-identity==1.25.3
+openai==2.46.0

@@ -1,0 +1,59 @@
+name: Build and test extension
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-test-publish:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      DOTNET_NOLOGO: true
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore bicep-ext-foundry-hosted-agents.sln
+
+      - name: Build
+        run: dotnet build bicep-ext-foundry-hosted-agents.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test bicep-ext-foundry-hosted-agents.sln --configuration Release --no-build
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Test hosted agent
+        run: |
+          python -m pip install -r base-image/requirements.txt
+          python -m unittest discover -s base-image/tests -v
+
+      - name: Install Bicep
+        run: |
+          az config set bicep.use_binary_from_path=false
+          az bicep install
+
+      - name: Publish local extension artifact
+        shell: pwsh
+        run: ./Infra/Scripts/Publish-Extension.ps1 -Target ./bin/foundry-extension
+
+      - name: Compile sample
+        run: ~/.azure/bin/bicep build-params Sample/main.example.bicepparam --stdout > /dev/null
+
+      - name: Compile publishing infrastructure
+        run: ~/.azure/bin/bicep build Infra/main.bicep --stdout > /dev/null

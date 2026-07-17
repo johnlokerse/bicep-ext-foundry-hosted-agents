@@ -1,0 +1,11 @@
+src/bin/
+src/obj/
+tests/bin/
+tests/obj/
+tests/TestResults/
+bin/
+obj/
+.DS_Store
+Sample/main.bicepparam
+Sample/smoke-output.json
+

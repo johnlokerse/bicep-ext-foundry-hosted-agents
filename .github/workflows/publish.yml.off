@@ -1,0 +1,72 @@
+name: Publish extension
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - PLAN.md
+      - README.md
+      - CONTRIBUTING.md
+      - Sample/**
+      - base-image/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+      EXTENSION_REGISTRY_NAME: ${{ vars.EXTENSION_REGISTRY_NAME }}
+      EXTENSION_RESOURCE_GROUP: ${{ vars.EXTENSION_RESOURCE_GROUP }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Log in to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install Bicep
+        run: az bicep install --version v0.45.15
+
+      - name: Provision extension publishing registry
+        run: |
+          az deployment sub create \
+            --name "foundry-bicep-extension-${GITHUB_RUN_ID}" \
+            --location "$AZURE_LOCATION" \
+            --template-file Infra/main.bicep \
+            --parameters \
+              location="$AZURE_LOCATION" \
+              registryName="$EXTENSION_REGISTRY_NAME" \
+              resourceGroupName="$EXTENSION_RESOURCE_GROUP" \
+            --output none
+
+      - name: Resolve version
+        id: version
+        run: |
+          dotnet tool install --global nbgv --version 3.10.91
+          echo "value=$(nbgv get-version -v SimpleVersion)" >> "$GITHUB_OUTPUT"
+
+      - name: Publish extension
+        shell: pwsh
+        run: |
+          $target = "br:${env:EXTENSION_REGISTRY_NAME}.azurecr.io/extensions/foundry-hosted-agents:${{ steps.version.outputs.value }}"
+          ./Infra/Scripts/Publish-Extension.ps1 -Target $target
+          "Published ``$target``." >> $env:GITHUB_STEP_SUMMARY
+

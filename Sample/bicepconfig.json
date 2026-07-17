@@ -1,0 +1,10 @@
+{
+  "experimentalFeaturesEnabled": {
+    "localDeploy": true
+  },
+  "extensions": {
+    "foundry": "../bin/foundry-extension"
+  },
+  "implicitExtensions": []
+}
+
