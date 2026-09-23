@@ -54,6 +54,3 @@ jobs:
 
       - name: Compile sample
         run: ~/.azure/bin/bicep build-params Sample/main.example.bicepparam --stdout > /dev/null
-
-      - name: Compile publishing infrastructure
-        run: ~/.azure/bin/bicep build Infra/main.bicep --stdout > /dev/null
