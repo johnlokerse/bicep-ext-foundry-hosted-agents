@@ -33,7 +33,7 @@ public sealed class HostedAgentResource : HostedAgentIdentifiers
     public required string Image { get; set; }
 
     [TypeProperty("CPU allocation for the hosted container.", ObjectTypePropertyFlags.Required)]
-    public string Cpu { get; set; };
+    public string Cpu { get; set; } = "1";
 
     [TypeProperty("Memory allocation for the hosted container, for example 2Gi.", ObjectTypePropertyFlags.Required)]
     public string Memory { get; set; } = "2Gi";
