@@ -38,10 +38,10 @@ The deploying identity needs **Foundry Project Manager** on the Foundry project.
 
 ## The two container registry artifacts
 
-This repository uses OCI/ACR for two unrelated artifacts:
+This repository uses OCI registries for two unrelated artifacts:
 
-1. **Bicep extension artifact**: the multi-platform extension binary published by `bicep publish-extension`.
-2. **Hosted-agent image**: the Linux `amd64` container Foundry runs.
+1. **Bicep extension artifact**: the multi-platform extension binary published by `bicep publish-extension` to the GitHub Container Registry (`ghcr.io`).
+2. **Hosted-agent image**: the Linux `amd64` container Foundry runs, stored in ACR.
 
 Publishing the extension does not build an agent image. For the REST deployment path, build and push the agent image first.
 
@@ -85,19 +85,22 @@ This is not required to use the extension; you can build your own image or use a
 
 ## Bicep usage
 
-Configure the local extension in `bicepconfig.json`:
+Released versions of the extension are published to the GitHub Container Registry. Reference one in `bicepconfig.json`:
 
 ```json
 {
   "experimentalFeaturesEnabled": {
-    "localDeploy": true
+    "localDeploy": true,
+    "ociEnabled": true
   },
   "extensions": {
-    "foundry": "../bin/foundry-extension"
+    "foundry": "br:ghcr.io/johnlokerse/bicep-ext-foundry-hosted-agents:<version>"
   },
   "implicitExtensions": []
 }
 ```
+
+To use a locally published build instead, set `"foundry": "../bin/foundry-extension"`, as the [`Sample`](./Sample/bicepconfig.json) does.
 
 Declare the project endpoint once on the extension:
 
@@ -151,7 +154,11 @@ raiPolicy: {
 
 Adding, removing, or changing the guardrail creates a new immutable agent version. This extension references policies but does not create them.
 
-GitHub OIDC uses `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID` secrets.
+## Releasing
+
+Run the **Release** workflow from `main` with a semantic version such as `0.2.0`. It builds and tests the extension, publishes it to `br:ghcr.io/johnlokerse/bicep-ext-foundry-hosted-agents:<version>` using the workflow's `GITHUB_TOKEN`, then creates the `v<version>` tag and GitHub release. Versions containing `-` are marked as pre-releases. Make the package public in the repository's package settings so consumers can pull it anonymously.
+
+To publish manually, log in to `ghcr.io` and run [`Publish-Extension.ps1`](./Infra/Scripts/Publish-Extension.ps1) from a folder whose `bicepconfig.json` enables `ociEnabled`, such as [`Infra`](./Infra/). Without it, Bicep treats every registry as an Azure Container Registry and tries to authenticate with Azure credentials.
 
 ## Troubleshooting
 
